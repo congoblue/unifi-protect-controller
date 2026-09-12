@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v5.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v5.0": {
+      "UnifiPtzCompanion/1.0.0": {
+        "runtime": {
+          "UnifiPtzCompanion.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "UnifiPtzCompanion/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

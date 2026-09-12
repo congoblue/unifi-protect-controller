@@ -1,0 +1,28 @@
+How Protect's PTZ control actually works under the hood:
+
+Auth is username/password against a local (non-SSO) admin account, hitting POST https://<nvr-ip>/api/auth/login with {"username", "password", "rememberMe": true, "token": ""}. The response gives you a deviceToken (JSON body) plus an X-CSRF-Token (response header) and a session cookie.
+Every subsequent call needs that cookie, plus headers TOKEN: <deviceToken> and X-CSRF-Token: <csrf token>.
+Presets live at GET /proxy/protect/api/cameras/{camera_id}/ptz/preset (returns slot numbers).
+Moving the camera is POST /proxy/protect/api/cameras/{camera_id}/ptz/goto/{slot} — slot -1 means "go home."
+
+The catch for Companion specifically: Companion's Generic HTTP module fires stateless requests with static headers — it doesn't do a "log in, capture a cookie, use it on the next call" dance. So you can't point Companion straight at Protect's API for this one; you need something in between that holds the session.
+
+The cleanest fix, given you already do web dev: a tiny local relay script that logs into Protect once, keeps re-authenticating in the background, and exposes plain unauthenticated endpoints on your own network that Companion just calls. I've written one below.
+
+Setup from here:
+
+Create a dedicated local admin account on your UDM/UNVR (not your main SSO login) — this is what the relay authenticates as. Settings > Admins > add a user with the Admin role.
+Edit the config block at the top — NVR_ADDRESS, USERNAME, PASSWORD, and RELAY_PORT if 4000 is taken.
+Install and run it:
+   npm install express axios axios-cookiejar-support tough-cookie
+   node unifi-ptz-relay.js
+
+Run this on whatever machine also runs Companion, or any always-on box on the same network (a Pi works fine).
+4. Hit http://localhost:4000/discover in a browser or curl — it'll return your camera IDs and their preset slot numbers. Note these down.
+5. In Companion, add a "Generic HTTP" connection pointed at http://localhost:4000 (or wherever the relay runs). For each button, use a GET request to /goto/<cameraId>/<slot> — no headers needed, the relay handles auth. Use slot -1 for the home position.
+
+Caveats, same spirit as before but sharper now that we're doing it directly:
+
+This is unofficial and undocumented — it works today, but Ubiquiti could change these endpoints on any firmware update with no warning. The unifi-ptz-better-patrol project (which I used as the source for these exact endpoints) is a good place to check if things stop working after an update.
+Use a dedicated local admin account, not your daily-driver one, in case anything needs revoking.
+If your Protect console has "Organizations" cloud management enabled, local admin accounts may be disabled entirely, which would break this approach — it needs local auth.
