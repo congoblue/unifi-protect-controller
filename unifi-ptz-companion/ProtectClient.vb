@@ -1,4 +1,3 @@
-
 Imports System.Linq
 Imports System.Net
 Imports System.Net.Http
@@ -92,6 +91,15 @@ Public Class ProtectClient
     End Function
 
     ' --- Camera discovery ---
+
+    ' Looks up a camera (with its presets) from the cache populated by
+    ' GetCamerasWithPresetsAsync. Returns Nothing if not cached yet.
+    Public Function GetCachedCamera(cameraId As String) As CameraInfo
+        SyncLock _lock
+            If _cameraCache Is Nothing Then Return Nothing
+            Return _cameraCache.Find(Function(c) c.Id = cameraId)
+        End SyncLock
+    End Function
 
     Public Async Function GetCamerasWithPresetsAsync(Optional forceRefresh As Boolean = False) As Task(Of List(Of CameraInfo))
         SyncLock _lock

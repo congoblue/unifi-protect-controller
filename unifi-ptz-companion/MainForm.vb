@@ -6,6 +6,8 @@ Public Class MainForm
 
     Private ReadOnly _protectClient As ProtectClient
     Private ReadOnly _cameraButtons(15) As Button
+    Private ReadOnly _presetButtons(9) As Button
+    Private _homeButton As Button
     Private ReadOnly _logBox As TextBox
     Private ReadOnly _lblSelected As Label
 
@@ -82,9 +84,10 @@ Public Class MainForm
                 .Text = $"Preset {i}",
                 .Location = New Point(10 + col * (btnW + gap), 25 + row * (btnH + gap)),
                 .Size = New Size(btnW, btnH),
-                .Tag = i
+                .Tag = i - 1 ' Protect's preset slots are 0-referenced; buttons are labeled 1-10
             }
             AddHandler btn.Click, AddressOf PresetButton_Click
+            _presetButtons(i - 1) = btn
             grp.Controls.Add(btn)
         Next
 
@@ -97,6 +100,7 @@ Public Class MainForm
             .Tag = -1
         }
         AddHandler homeBtn.Click, AddressOf PresetButton_Click
+        _homeButton = homeBtn
         grp.Controls.Add(homeBtn)
 
         Return grp
@@ -192,12 +196,34 @@ Public Class MainForm
         HighlightSelected(btn)
         _lblSelected.Text = $"Selected: {status.SelectedCameraName} ({status.SelectedCameraId})"
         Log($"Selected camera '{status.SelectedCameraName}'")
+        UpdatePresetLabels(camId)
+    End Sub
+
+    ' Relabels the preset buttons with this camera's actual preset names
+    ' (falling back to "Preset N" for slots that don't have one). Different
+    ' cameras can name the same slot number differently, so this runs every
+    ' time the selection changes.
+    Private Sub UpdatePresetLabels(cameraId As String)
+        Dim cam = _protectClient.GetCachedCamera(cameraId)
+        If cam Is Nothing Then Return
+
+        For i As Integer = 1 To 10
+            Dim preset = cam.Presets.Find(Function(p) p.Slot = i - 1)
+            If preset IsNot Nothing AndAlso Not String.IsNullOrEmpty(preset.Name) Then
+                _presetButtons(i - 1).Text = $"{i}: {preset.Name}"
+            Else
+                _presetButtons(i - 1).Text = $"Preset {i}"
+            End If
+        Next
+
+        Dim homePreset = cam.Presets.Find(Function(p) p.Slot = -1)
+        _homeButton.Text = If(homePreset IsNot Nothing AndAlso Not String.IsNullOrEmpty(homePreset.Name), $"Home: {homePreset.Name}", "Home")
     End Sub
 
     Private Async Sub PresetButton_Click(sender As Object, e As EventArgs)
         Dim btn = CType(sender, Button)
         Dim slot = CInt(btn.Tag)
-        Log($"Preset {slot}: sending...")
+        Log($"{btn.Text} (slot {slot}): sending...")
         Dim result = Await _protectClient.GotoPresetAsync(slot)
         Log(result.Message)
     End Sub
