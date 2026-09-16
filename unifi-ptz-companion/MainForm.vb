@@ -5,7 +5,7 @@ Public Class MainForm
     Inherits Form
 
     Private ReadOnly _protectClient As ProtectClient
-    Private ReadOnly _cameraButtons(15) As Button
+    Private ReadOnly _cameraButtons(31) As Button
     Private ReadOnly _presetButtons(9) As Button
     Private _homeButton As Button
     Private ReadOnly _logBox As TextBox
@@ -35,16 +35,12 @@ Public Class MainForm
         grpPresets.Location = New Point(524, 40)
         Me.Controls.Add(grpPresets)
 
-        Dim grpPtz = BuildPtzGroup()
-        grpPtz.Location = New Point(12, 292)
-        Me.Controls.Add(grpPtz)
-
         _logBox = New TextBox() With {
             .Multiline = True,
             .ReadOnly = True,
             .ScrollBars = ScrollBars.Vertical,
-            .Location = New Point(12, 579),
-            .Size = New Size(974, 140),
+            .Location = New Point(12, 482),
+            .Size = New Size(974, 237),
             .Font = New Font("Consolas", 8.5F)
         }
         Me.Controls.Add(_logBox)
@@ -55,9 +51,9 @@ Public Class MainForm
     ' --- Layout builders ---
 
     Private Function BuildCameraGroup() As GroupBox
-        Dim grp As New GroupBox() With {.Text = "Cameras", .Size = New Size(500, 240)}
+        Dim grp As New GroupBox() With {.Text = "Cameras", .Size = New Size(500, 430)}
         Const btnW As Integer = 110, btnH As Integer = 40, gap As Integer = 8
-        For i As Integer = 0 To 15
+        For i As Integer = 0 To 31
             Dim col = i Mod 4
             Dim row = i \ 4
             Dim btn As New Button() With {
@@ -106,62 +102,6 @@ Public Class MainForm
         Return grp
     End Function
 
-    Private Function BuildPtzGroup() As GroupBox
-        Dim grp As New GroupBox() With {.Text = "PTZ Control", .Size = New Size(500, 240)}
-        Const cell As Integer = 70, cellH As Integer = 40, gap As Integer = 8
-
-        Dim btnUp = MakeDirectionButton("Up", 10 + (cell + gap), 25, cell, cellH)
-        Dim btnLeft = MakeDirectionButton("Left", 10, 25 + (cellH + gap), cell, cellH)
-        Dim btnRight = MakeDirectionButton("Right", 10 + 2 * (cell + gap), 25 + (cellH + gap), cell, cellH)
-        Dim btnDown = MakeDirectionButton("Down", 10 + (cell + gap), 25 + 2 * (cellH + gap), cell, cellH)
-
-        grp.Controls.Add(btnUp)
-        grp.Controls.Add(btnLeft)
-        grp.Controls.Add(btnRight)
-        grp.Controls.Add(btnDown)
-
-        Dim btnZoomIn As New Button() With {
-            .Text = "Zoom +",
-            .Location = New Point(260, 25),
-            .Size = New Size(150, 40),
-            .Tag = "zoomin"
-        }
-        Dim btnZoomOut As New Button() With {
-            .Text = "Zoom -",
-            .Location = New Point(260, 73),
-            .Size = New Size(150, 40),
-            .Tag = "zoomout"
-        }
-        AddHandler btnZoomIn.MouseDown, AddressOf DirectionButton_MouseDown
-        AddHandler btnZoomIn.MouseUp, AddressOf DirectionButton_MouseUp
-        AddHandler btnZoomOut.MouseDown, AddressOf DirectionButton_MouseDown
-        AddHandler btnZoomOut.MouseUp, AddressOf DirectionButton_MouseUp
-        grp.Controls.Add(btnZoomIn)
-        grp.Controls.Add(btnZoomOut)
-
-        Dim note As New Label() With {
-            .Text = "Direction/zoom use a placeholder endpoint -- see ProtectClient.vb",
-            .Location = New Point(10, 130),
-            .Size = New Size(460, 60),
-            .ForeColor = Color.DarkRed
-        }
-        grp.Controls.Add(note)
-
-        Return grp
-    End Function
-
-    Private Function MakeDirectionButton(direction As String, x As Integer, y As Integer, w As Integer, h As Integer) As Button
-        Dim btn As New Button() With {
-            .Text = direction,
-            .Location = New Point(x, y),
-            .Size = New Size(w, h),
-            .Tag = direction.ToLowerInvariant()
-        }
-        AddHandler btn.MouseDown, AddressOf DirectionButton_MouseDown
-        AddHandler btn.MouseUp, AddressOf DirectionButton_MouseUp
-        Return btn
-    End Function
-
     ' --- Event handlers ---
 
     Private Async Sub MainForm_Load(sender As Object, e As EventArgs)
@@ -179,8 +119,8 @@ Public Class MainForm
                 End If
             Next
             Log($"Loaded {cams.Count} camera(s).")
-            If cams.Count > 16 Then
-                Log($"Note: {cams.Count - 16} camera(s) beyond the first 16 weren't shown.")
+            If cams.Count > _cameraButtons.Length Then
+                Log($"Note: {cams.Count - _cameraButtons.Length} camera(s) beyond the first {_cameraButtons.Length} weren't shown.")
             End If
         Catch ex As Exception
             Log($"Failed to load cameras: {ex.Message}")
@@ -225,20 +165,6 @@ Public Class MainForm
         Dim slot = CInt(btn.Tag)
         Log($"{btn.Text} (slot {slot}): sending...")
         Dim result = Await _protectClient.GotoPresetAsync(slot)
-        Log(result.Message)
-    End Sub
-
-    Private Async Sub DirectionButton_MouseDown(sender As Object, e As MouseEventArgs)
-        Dim btn = CType(sender, Button)
-        Dim direction = CStr(btn.Tag)
-        Log($"{direction}: start")
-        Dim result = Await _protectClient.MovePtzAsync(direction)
-        Log(result.Message)
-    End Sub
-
-    Private Async Sub DirectionButton_MouseUp(sender As Object, e As MouseEventArgs)
-        Log("stop")
-        Dim result = Await _protectClient.StopPtzAsync()
         Log(result.Message)
     End Sub
 

@@ -48,14 +48,14 @@ Companion still run in the background alongside it.
   /proxy/protect/api/cameras/{id}/ptz/goto/{slot}`, slot `-1` = home).
   Sourced from the `unifi-ptz-better-patrol` open-source project, which
   reverse-engineers these specifically.
-- **NOT confirmed — placeholder only:** continuous pan/tilt/zoom (the
-  Up/Down/Left/Right/Zoom+/Zoom- buttons). No public reverse-engineering
-  of this was found anywhere. `MovePtzAsync`/`StopPtzAsync` in
-  `ProtectClient.vb` currently POST to a guessed endpoint
-  (`/proxy/protect/api/cameras/{id}/ptz/move`) that will likely 404.
-  **To fix:** open Protect's web UI in Chrome, DevTools → Network →
-  filter Fetch/XHR, drag the on-screen joystick, and copy the real
-  request's method/path/body into those two methods.
+- **Continuous pan/tilt/zoom is not exposed by the API and has been
+  removed from the app.** The UI previously had a "PTZ Control" frame
+  with Up/Down/Left/Right/Zoom+/Zoom- buttons backed by a guessed
+  `/proxy/protect/api/cameras/{id}/ptz/move` endpoint, but no public
+  reverse-engineering of continuous move over Protect's API was ever
+  found, and it isn't possible with the current API. The frame, its
+  buttons, and `MovePtzAsync`/`StopPtzAsync` in `ProtectClient.vb` were
+  deleted rather than kept as dead placeholder code.
 
 ## Project structure
 
@@ -65,14 +65,14 @@ Companion still run in the background alongside it.
   visible for `Console.WriteLine` log output alongside the form).
 - `Program.vb` — entry point. Starts the `HttpListener` server in the
   background, then hands the main thread to the WinForms message loop.
-- `MainForm.vb` — the UI: 16 camera buttons (4x4 grid, populated from
+- `MainForm.vb` — the UI: 32 camera buttons (4x8 grid, populated from
   the real camera list on load), 10 preset buttons + a bonus Home
   button (relabeled with each camera's actual preset names on
-  selection), a PTZ D-pad + zoom buttons, and a log panel.
+  selection), and a log panel. (No PTZ D-pad/zoom controls — continuous
+  move isn't possible with the current API, see above.)
 - `ProtectClient.vb` — all UniFi Protect communication: login/session
   handling (cookie + CSRF token + re-auth on 401/403), camera/preset
-  discovery (cached 30s), selection state, goto-preset, and the
-  placeholder continuous-move methods.
+  discovery (cached 30s), selection state, and goto-preset.
 - `Models.vb` — plain data classes (`AppConfig`, `CameraInfo`,
   `PresetInfo`, `GotoResult`, `SelectionStatus`) plus `AppConfig`'s
   first-run `config.json` creation.
@@ -87,7 +87,6 @@ source. Fields: `NvrAddress` (must be `https://`), `Username`,
 
 ## Still outstanding
 
-- Real continuous PTZ move/stop endpoint (see above).
 - Companion-side setup (connecting Companion's Generic HTTP module to
   this app's endpoints) was covered earlier in the conversation this
   file summarizes, but isn't re-documented in detail here.
